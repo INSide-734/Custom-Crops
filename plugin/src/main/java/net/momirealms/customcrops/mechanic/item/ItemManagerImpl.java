@@ -40,6 +40,8 @@ import net.momirealms.customcrops.api.mechanic.world.SimpleLocation;
 import net.momirealms.customcrops.api.mechanic.world.level.*;
 import net.momirealms.customcrops.api.util.LogUtils;
 import net.momirealms.customcrops.mechanic.item.custom.AbstractCustomListener;
+import net.momirealms.customcrops.mechanic.item.custom.crucible.CrucibleListener;
+import net.momirealms.customcrops.mechanic.item.custom.crucible.CrucibleProvider;
 import net.momirealms.customcrops.mechanic.item.custom.itemsadder.ItemsAdderListener;
 import net.momirealms.customcrops.mechanic.item.custom.itemsadder.ItemsAdderProvider;
 import net.momirealms.customcrops.mechanic.item.custom.oraxen.OraxenListener;
@@ -128,6 +130,9 @@ public class ItemManagerImpl implements ItemManager {
         } else if (Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")) {
             listener = new ItemsAdderListener(this);
             customProvider = new ItemsAdderProvider();
+        } else if (Bukkit.getPluginManager().isPluginEnabled("MythicCrucible")) {
+            listener = new CrucibleListener(this);
+            customProvider = new CrucibleProvider();
         } else {
             LogUtils.severe("======================================================");
             LogUtils.severe(" Please install ItemsAdder or Oraxen as dependency.");
@@ -1705,7 +1710,7 @@ public class ItemManagerImpl implements ItemManager {
 
     @SuppressWarnings("DuplicatedCode")
     private void loadCrop(String key, ConfigurationSection section) {
-        ItemCarrier itemCarrier = ItemCarrier.valueOf(section.getString("type"));
+        ItemCarrier itemCarrier = ItemCarrier.valueOf(section.getString("type").toUpperCase(Locale.ENGLISH));
         if (itemCarrier != ItemCarrier.TRIPWIRE && itemCarrier != ItemCarrier.ITEM_DISPLAY && itemCarrier != ItemCarrier.ITEM_FRAME) {
             LogUtils.warn("Unsupported crop type: " + itemCarrier.name());
             return;
