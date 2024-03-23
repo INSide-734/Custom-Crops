@@ -20,20 +20,18 @@ package net.momirealms.customcrops.api.mechanic.world;
 import org.bukkit.Chunk;
 import org.jetbrains.annotations.NotNull;
 
-public record ChunkCoordinate(int x, int z) {
+public record RegionPos(int x, int z) {
 
-    private static final ChunkCoordinate empty = new ChunkCoordinate(0, 0);
-
-    public static ChunkCoordinate of(int x, int z) {
-        return new ChunkCoordinate(x, z);
+    public static RegionPos of(int x, int z) {
+        return new RegionPos(x, z);
     }
 
-    public static ChunkCoordinate getByString(String coordinate) {
+    public static RegionPos getByString(String coordinate) {
         String[] split = coordinate.split(",", 2);
         try {
             int x = Integer.parseInt(split[0]);
             int z = Integer.parseInt(split[1]);
-            return new ChunkCoordinate(x, z);
+            return new RegionPos(x, z);
         }
         catch (NumberFormatException e) {
             e.printStackTrace();
@@ -55,7 +53,7 @@ public record ChunkCoordinate(int x, int z) {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final ChunkCoordinate other = (ChunkCoordinate) obj;
+        final RegionPos other = (RegionPos) obj;
         if (this.x != other.x) {
             return false;
         }
@@ -66,13 +64,22 @@ public record ChunkCoordinate(int x, int z) {
     }
 
     @NotNull
-    public static ChunkCoordinate getByBukkitChunk(@NotNull Chunk chunk) {
-        return new ChunkCoordinate(chunk.getX(), chunk.getZ());
+    public static RegionPos getByBukkitChunk(@NotNull Chunk chunk) {
+        int regionX = (int) Math.floor((double) chunk.getX() / 32.0);
+        int regionZ = (int) Math.floor((double) chunk.getZ() / 32.0);
+        return new RegionPos(regionX, regionZ);
+    }
+
+    @NotNull
+    public static RegionPos getByChunkPos(@NotNull ChunkPos chunk) {
+        int regionX = (int) Math.floor((double) chunk.x() / 32.0);
+        int regionZ = (int) Math.floor((double) chunk.z() / 32.0);
+        return new RegionPos(regionX, regionZ);
     }
 
     @Override
     public String toString() {
-        return "ChunkCoordinate{" +
+        return "RegionPos{" +
                 "x=" + x +
                 ", z=" + z +
                 '}';

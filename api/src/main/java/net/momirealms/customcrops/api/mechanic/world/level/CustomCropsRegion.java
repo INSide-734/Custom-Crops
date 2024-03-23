@@ -17,24 +17,25 @@
 
 package net.momirealms.customcrops.api.mechanic.world.level;
 
-import net.momirealms.customcrops.api.mechanic.world.BlockPos;
-import net.momirealms.customcrops.api.mechanic.world.CustomCropsBlock;
+import net.momirealms.customcrops.api.mechanic.world.ChunkPos;
+import net.momirealms.customcrops.api.mechanic.world.RegionPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
-public interface CustomCropsSection {
+public interface CustomCropsRegion {
 
-    int getSectionID();
+    CustomCropsWorld getCustomCropsWorld();
 
-    CustomCropsBlock getBlockAt(BlockPos pos);
+    byte @Nullable [] getChunkBytes(ChunkPos pos);
 
-    CustomCropsBlock removeBlockAt(BlockPos pos);
+    RegionPos getRegionPos();
 
-    CustomCropsBlock addBlockAt(BlockPos pos, CustomCropsBlock block);
+    void removeChunk(ChunkPos pos);
+
+    void saveChunk(ChunkPos pos, byte[] data);
+
+    Map<ChunkPos, byte[]> getRegionDataToSave();
 
     boolean canPrune();
-
-    CustomCropsBlock[] getBlocks();
-
-    Map<BlockPos, CustomCropsBlock> getBlockMap();
 }

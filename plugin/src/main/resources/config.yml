@@ -1,5 +1,5 @@
 # Don't change
-config-version: '35'
+config-version: '36'
 
 # Debug
 debug: false
@@ -19,7 +19,7 @@ worlds:
   # Especially for realm systems
   absolute-world-folder-path: ''
   # A list of worlds that would decide where the plugin mechanisms take effect
-  # Mode: whitelist/blacklist
+  # Mode: whitelist/blacklist/regex
   mode: blacklist
   list:
     - blacklist_world
@@ -57,7 +57,7 @@ worlds:
         mode: RANDOM_TICK
         tick-interval: 1
         # Limit the max amount of crops in one chunk
-        max-per-chunk: 150
+        max-per-chunk: 256
       # Settings for pots
       pot:
         # RANDOM_TICK / SCHEDULED_TICK
@@ -71,7 +71,7 @@ worlds:
         mode: SCHEDULED_TICK
         tick-interval: 2
         # Limit the max amount of sprinklers in one chunk
-        max-per-chunk: 20
+        max-per-chunk: 64
     # You can override the default settings for worlds here
     _WORLDS_:
       world_nether:

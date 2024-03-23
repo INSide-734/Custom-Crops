@@ -20,8 +20,9 @@ package net.momirealms.customcrops.mechanic.world;
 import net.momirealms.customcrops.api.CustomCropsPlugin;
 import net.momirealms.customcrops.api.manager.WorldManager;
 import net.momirealms.customcrops.api.mechanic.item.*;
+import net.momirealms.customcrops.api.mechanic.misc.MatchRule;
 import net.momirealms.customcrops.api.mechanic.world.AbstractWorldAdaptor;
-import net.momirealms.customcrops.api.mechanic.world.ChunkCoordinate;
+import net.momirealms.customcrops.api.mechanic.world.ChunkPos;
 import net.momirealms.customcrops.api.mechanic.world.CustomCropsBlock;
 import net.momirealms.customcrops.api.mechanic.world.SimpleLocation;
 import net.momirealms.customcrops.api.mechanic.world.level.*;
@@ -50,7 +51,7 @@ public class WorldManagerImpl implements WorldManager, Listener {
     private final ConcurrentHashMap<String, CWorld> loadedWorlds;
     private final HashMap<String, WorldSetting> worldSettingMap;
     private WorldSetting defaultWorldSetting;
-    private boolean whiteListOrBlackList;
+    private MatchRule matchRule;
     private HashSet<String> worldList;
     private AbstractWorldAdaptor worldAdaptor;
     private String absoluteWorldFolder;
@@ -118,7 +119,7 @@ public class WorldManagerImpl implements WorldManager, Listener {
         }
 
         this.absoluteWorldFolder = section.getString("absolute-world-folder-path","");
-        this.whiteListOrBlackList = section.getString("mode", "blacklist").equalsIgnoreCase("whitelist");
+        this.matchRule = MatchRule.valueOf(section.getString("mode", "blacklist").toUpperCase(Locale.ENGLISH));
         this.worldList = new HashSet<>(section.getStringList("list"));
 
         // limitation
@@ -196,10 +197,17 @@ public class WorldManagerImpl implements WorldManager, Listener {
 
     @Override
     public boolean isMechanicEnabled(@NotNull World world) {
-        if (whiteListOrBlackList) {
+        if (matchRule == MatchRule.WHITELIST) {
             return worldList.contains(world.getName());
-        } else {
+        } else if (matchRule == MatchRule.BLACKLIST) {
             return !worldList.contains(world.getName());
+        } else {
+            for (String regex : worldList) {
+                if (world.getName().matches(regex)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -404,7 +412,7 @@ public class WorldManagerImpl implements WorldManager, Listener {
     public void removeGlassAt(@NotNull SimpleLocation location) {
         CWorld cWorld = loadedWorlds.get(location.getWorldName());
         if (cWorld == null) {
-            LogUtils.warn("Unsupported operation: Removing crop from unloaded world " + location);
+            LogUtils.warn("Unsupported operation: Removing glass from unloaded world " + location);
             return;
         }
         cWorld.removeGlassAt(location);
@@ -463,20 +471,20 @@ public class WorldManagerImpl implements WorldManager, Listener {
             return;
 
         CustomCropsWorld customCropsWorld = optional.get();
-        ChunkCoordinate chunkCoordinate = ChunkCoordinate.getByBukkitChunk(bukkitChunk);
+        ChunkPos chunkPos = ChunkPos.getByBukkitChunk(bukkitChunk);
 
-        if (customCropsWorld.isChunkLoaded(chunkCoordinate)) {
+        if (customCropsWorld.isChunkLoaded(chunkPos)) {
             return;
         }
 
         // load chunks
-        this.worldAdaptor.loadDynamicData(customCropsWorld, chunkCoordinate);
+        this.worldAdaptor.loadChunkData(customCropsWorld, chunkPos);
 
         // offline grow part
         if (!customCropsWorld.getWorldSetting().isOfflineGrow()) return;
 
         // If chunk data not exists, return
-        Optional<CustomCropsChunk> optionalChunk = customCropsWorld.getChunkAt(chunkCoordinate);
+        Optional<CustomCropsChunk> optionalChunk = customCropsWorld.getLoadedChunkAt(chunkPos);
         if (optionalChunk.isEmpty()) {
             return;
         }
@@ -493,9 +501,9 @@ public class WorldManagerImpl implements WorldManager, Listener {
             return;
 
         CustomCropsWorld customCropsWorld = optional.get();
-        ChunkCoordinate chunkCoordinate = ChunkCoordinate.getByBukkitChunk(bukkitChunk);
+        ChunkPos chunkPos = ChunkPos.getByBukkitChunk(bukkitChunk);
 
-        this.worldAdaptor.unloadDynamicData(customCropsWorld, chunkCoordinate);
+        this.worldAdaptor.unloadChunkData(customCropsWorld, chunkPos);
     }
 
     @EventHandler
@@ -509,12 +517,22 @@ public class WorldManagerImpl implements WorldManager, Listener {
     }
 
     @Override
-    public void saveChunkToFile(CustomCropsChunk chunk) {
-        this.worldAdaptor.saveDynamicData(chunk.getCustomCropsWorld(), chunk);
+    public void saveChunkToCachedRegion(CustomCropsChunk chunk) {
+        this.worldAdaptor.saveChunkToCachedRegion(chunk);
+    }
+
+    @Override
+    public void saveRegionToFile(CustomCropsRegion region) {
+        this.worldAdaptor.saveRegion(region);
     }
 
     @Override
     public AbstractWorldAdaptor getWorldAdaptor() {
         return worldAdaptor;
+    }
+
+    @Override
+    public void saveInfoData(CustomCropsWorld customCropsWorld) {
+        this.worldAdaptor.saveInfoData(customCropsWorld);
     }
 }
