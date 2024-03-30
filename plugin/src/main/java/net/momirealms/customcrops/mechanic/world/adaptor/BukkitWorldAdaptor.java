@@ -27,6 +27,7 @@ import com.github.luben.zstd.Zstd;
 import com.google.gson.Gson;
 import net.momirealms.customcrops.api.CustomCropsPlugin;
 import net.momirealms.customcrops.api.manager.ConfigManager;
+import net.momirealms.customcrops.api.manager.VersionManager;
 import net.momirealms.customcrops.api.manager.WorldManager;
 import net.momirealms.customcrops.api.mechanic.world.*;
 import net.momirealms.customcrops.api.mechanic.world.level.CustomCropsChunk;
@@ -89,11 +90,10 @@ public class BukkitWorldAdaptor extends AbstractWorldAdaptor {
             return;
         }
 
-        try {
+        if (VersionManager.isHigherThan1_18()) {
             world.getPersistentDataContainer().set(key, PersistentDataType.STRING,
                     gson.toJson(cWorld.getInfoData()));
-        } catch (Exception e) {
-            // handle exceptions for those servers without pdc
+        } else {
             try (FileWriter file = new FileWriter(new File(getWorldFolder(world), "cworld.dat"))) {
                 gson.toJson(cWorld.getInfoData(), file);
             } catch (IOException ioException) {
@@ -116,16 +116,18 @@ public class BukkitWorldAdaptor extends AbstractWorldAdaptor {
 
         // try converting legacy worlds
         if (ConfigManager.convertWorldOnLoad()) {
-            convertWorldFromV33toV34(cWorld, world);
-            return;
+            if (convertWorldFromV33toV34(cWorld, world)) {
+                return;
+            }
         }
 
-        try {
+        if (VersionManager.isHigherThan1_18()) {
             // init world basic info
             String json = world.getPersistentDataContainer().get(key, PersistentDataType.STRING);
             WorldInfoData data = (json == null || json.equals("null")) ? WorldInfoData.empty() : gson.fromJson(json, WorldInfoData.class);
+            if (data == null) data = WorldInfoData.empty();
             cWorld.setInfoData(data);
-        } catch (Exception e) {
+        } else {
             File cWorldFile = new File(getWorldFolder(world), "cworld.dat");
             if (cWorldFile.exists()) {
                 byte[] fileBytes = new byte[(int) cWorldFile.length()];
@@ -611,7 +613,7 @@ public class BukkitWorldAdaptor extends AbstractWorldAdaptor {
         return outByteStream.toByteArray();
     }
 
-    public void convertWorldFromV33toV34(@Nullable CWorld cWorld, World world) {
+    public boolean convertWorldFromV33toV34(@Nullable CWorld cWorld, World world) {
         // handle legacy files
         File leagcyFile = new File(world.getWorldFolder(), "customcrops" + File.separator + "data.yml");
         if (leagcyFile.exists()) {
@@ -633,10 +635,10 @@ public class BukkitWorldAdaptor extends AbstractWorldAdaptor {
 
             // read chunks
             File folder = new File(world.getWorldFolder(), "customcrops" + File.separator + "chunks");
-            if (!folder.exists()) return;
+            if (!folder.exists()) return false;
             LogUtils.warn("Converting chunks for world " + world.getName() + " from 3.3 to 3.4... This might take some time.");
             File[] data_files = folder.listFiles();
-            if (data_files == null) return;
+            if (data_files == null) return false;
 
             HashMap<RegionPos, CustomCropsRegion> regionHashMap = new HashMap<>();
 
@@ -685,7 +687,9 @@ public class BukkitWorldAdaptor extends AbstractWorldAdaptor {
                 saveRegion(region);
             }
             LogUtils.info("Successfully converted chunks for world: " + world.getName());
+            return true;
         }
+        return false;
     }
 
     public void convertWorldFromV342toV343(@Nullable CWorld cWorld, World world) {

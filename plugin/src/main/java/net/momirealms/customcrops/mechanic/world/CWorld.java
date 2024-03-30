@@ -21,6 +21,7 @@ import net.momirealms.customcrops.api.CustomCropsPlugin;
 import net.momirealms.customcrops.api.common.Pair;
 import net.momirealms.customcrops.api.event.SeasonChangeEvent;
 import net.momirealms.customcrops.api.manager.ConfigManager;
+import net.momirealms.customcrops.api.manager.VersionManager;
 import net.momirealms.customcrops.api.manager.WorldManager;
 import net.momirealms.customcrops.api.mechanic.item.Crop;
 import net.momirealms.customcrops.api.mechanic.item.Fertilizer;
@@ -33,8 +34,10 @@ import net.momirealms.customcrops.api.mechanic.world.SimpleLocation;
 import net.momirealms.customcrops.api.mechanic.world.level.*;
 import net.momirealms.customcrops.api.mechanic.world.season.Season;
 import net.momirealms.customcrops.api.scheduler.CancellableTask;
+import net.momirealms.customcrops.api.scheduler.Scheduler;
 import net.momirealms.customcrops.api.util.LogUtils;
 import net.momirealms.customcrops.utils.EventUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 public class CWorld implements CustomCropsWorld {
 
     private final WorldManager worldManager;
-    private final WeakReference<World> world;
+    private WeakReference<World> world;
     private final ConcurrentHashMap<ChunkPos, CChunk> loadedChunks;
     private final ConcurrentHashMap<ChunkPos, CChunk> lazyChunks;
     private final ConcurrentHashMap<RegionPos, CRegion> loadedRegions;
@@ -119,8 +122,15 @@ public class CWorld implements CustomCropsWorld {
             this.updateSeasonAndDate();
         }
         if (setting.isSchedulerEnabled()) {
-            for (CChunk chunk : loadedChunks.values()) {
-                chunk.secondTimer();
+            if (VersionManager.folia()) {
+                Scheduler scheduler = CustomCropsPlugin.get().getScheduler();
+                for (CChunk chunk : loadedChunks.values()) {
+                    scheduler.runTaskSync(chunk::secondTimer, getWorld(), chunk.getChunkPos().x(), chunk.getChunkPos().z());
+                }
+            } else {
+                for (CChunk chunk : loadedChunks.values()) {
+                    chunk.secondTimer();
+                }
             }
         }
 
@@ -142,7 +152,7 @@ public class CWorld implements CustomCropsWorld {
     }
 
     private void updateSeasonAndDate() {
-        World bukkitWorld = world.get();
+        World bukkitWorld = getWorld();
         if (bukkitWorld == null) {
             LogUtils.severe(String.format("World %s unloaded unexpectedly. Stop ticking task...", worldName));
             this.cancelTick();
@@ -192,7 +202,13 @@ public class CWorld implements CustomCropsWorld {
     @Nullable
     @Override
     public World getWorld() {
-        return world.get();
+        return Optional.ofNullable(world.get()).orElseGet(() -> {
+            World bukkitWorld = Bukkit.getWorld(worldName);
+            if (bukkitWorld != null) {
+                this.world = new WeakReference<>(bukkitWorld);
+            }
+            return bukkitWorld;
+        });
     }
 
     @Override
