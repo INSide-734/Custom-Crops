@@ -15,14 +15,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.momirealms.customcrops.mechanic.item;
+package net.momirealms.customcrops.api.mechanic.item.custom;
 
 import net.momirealms.customcrops.api.manager.VersionManager;
 import net.momirealms.customcrops.api.mechanic.misc.CRotation;
+import net.momirealms.customcrops.api.util.DisplayEntityUtils;
 import net.momirealms.customcrops.api.util.LocationUtils;
-import net.momirealms.customcrops.util.ConfigUtils;
-import net.momirealms.customcrops.util.DisplayEntityUtils;
-import net.momirealms.customcrops.util.RotationUtils;
+import net.momirealms.customcrops.api.util.StringUtils;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -38,7 +37,7 @@ public interface CustomProvider {
     void placeCustomBlock(Location location, String id);
 
     default void placeBlock(Location location, String id) {
-        if (ConfigUtils.isVanillaItem(id)) {
+        if (StringUtils.isCapitalLetter(id)) {
             location.getBlock().setType(Material.valueOf(id));
         } else {
             placeCustomBlock(location, id);
@@ -81,7 +80,7 @@ public interface CustomProvider {
             CRotation previousCRotation;
             Entity first = entities.stream().findFirst().get();
             if (first instanceof ItemFrame itemFrame) {
-                previousCRotation = RotationUtils.getCRotation(itemFrame.getRotation());
+                previousCRotation = CRotation.getByRotation(itemFrame.getRotation());
             } else if (VersionManager.isHigherThan1_19_R3()) {
                 previousCRotation = DisplayEntityUtils.getRotation(first);
             } else {
@@ -108,5 +107,28 @@ public interface CustomProvider {
             }
         }
         return "AIR";
+    }
+
+    default CRotation getRotation(Location location) {
+        if (location.getBlock().getType() == Material.AIR) {
+            Collection<Entity> entities = location.getWorld().getNearbyEntities(LocationUtils.toCenterLocation(location), 0.5,0.51,0.5);
+            entities.removeIf(entity -> {
+                EntityType type = entity.getType();
+                return type != EntityType.ITEM_FRAME
+                        && (!VersionManager.isHigherThan1_19_R3() || type != EntityType.ITEM_DISPLAY);
+            });
+            if (entities.size() == 0) return CRotation.NONE;
+            CRotation rotation;
+            Entity first = entities.stream().findFirst().get();
+            if (first instanceof ItemFrame itemFrame) {
+                rotation = CRotation.getByRotation(itemFrame.getRotation());
+            } else if (VersionManager.isHigherThan1_19_R3()) {
+                rotation = DisplayEntityUtils.getRotation(first);
+            } else {
+                rotation = CRotation.NONE;
+            }
+            return rotation;
+        }
+        return CRotation.NONE;
     }
 }

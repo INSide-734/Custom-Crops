@@ -17,6 +17,7 @@
 
 package net.momirealms.customcrops.mechanic.item.impl;
 
+import net.momirealms.customcrops.api.CustomCropsPlugin;
 import net.momirealms.customcrops.api.mechanic.action.Action;
 import net.momirealms.customcrops.api.mechanic.action.ActionTrigger;
 import net.momirealms.customcrops.api.mechanic.condition.Conditions;
@@ -26,6 +27,7 @@ import net.momirealms.customcrops.api.mechanic.item.Crop;
 import net.momirealms.customcrops.api.mechanic.item.ItemCarrier;
 import net.momirealms.customcrops.api.mechanic.requirement.Requirement;
 import net.momirealms.customcrops.mechanic.item.AbstractEventItem;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -143,6 +145,7 @@ public class CropConfig extends AbstractEventItem implements Crop {
         return point2StageConfigMap.get(point);
     }
 
+    @NotNull
     @Override
     public String getStageItemByPoint(int point) {
         if (point >= 0) {
@@ -202,6 +205,11 @@ public class CropConfig extends AbstractEventItem implements Crop {
             this.hologramOffset = hologramOffset;
             this.interactRequirements = interactRequirements;
             this.breakRequirements = breakRequirements;
+        }
+
+        @Override
+        public Crop getCrop() {
+            return CustomCropsPlugin.get().getItemManager().getCropByStageID(stageID);
         }
 
         @Override
